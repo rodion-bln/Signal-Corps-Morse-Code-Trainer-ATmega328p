@@ -16,7 +16,7 @@ The distinctive feature of this project is that decoding is done through **audio
 ```
 .
 - pm_proiect.ino                # Main Arduino sketch
-- Schematic_SignalCorps.png     # Electrical schematic (Autodesk Fusion)
+- SignalCorps_Schematic.pdf     # Electrical schematic (Autodesk Fusion)
 - SignalCorpsDiagramDrawio.png  # Block diagram (draw.io)
 - WokwiSignalCorps.jpeg         # Wokwi simulation screenshot
 - atmega328p.lbr                # Custom Fusion library for ATmega328P-XMINI
