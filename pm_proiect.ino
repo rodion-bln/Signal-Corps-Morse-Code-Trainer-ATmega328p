@@ -1,6 +1,5 @@
 // =====================================================
 //  Signal Corps - Mod Trainer + Mod Decoder
-//  LCD = design tematic, OLED = trainer/decoder grafic
 // =====================================================
 
 #include <Wire.h>
@@ -8,7 +7,6 @@
 #include <Adafruit_SSD1306.h>
 #include <LiquidCrystal_I2C.h>
 
-// ---- Pini ----
 #define PIN_CHEIE   2
 #define PIN_BUZZER  3
 #define PIN_BTN_MOD 4
@@ -42,7 +40,7 @@ int pragVariatie = 15;
 unsigned long ultimaAdaptareBaseline = 0;
 #define INTERVAL_ADAPTARE 100
 
-// ---- Stare semnal Morse (char buffer in loc de String) ----
+// ---- Stare semnal Morse ----
 #define MAX_MORSE_LEN  8
 char secventaMorse[MAX_MORSE_LEN + 1] = "";
 uint8_t lungimeMorse = 0;
@@ -54,18 +52,16 @@ unsigned long ultimaSchimbareMic = 0;
 
 // ---- Mod Trainer ----
 char literaCeruta = 'A';
-char morseAsteptat[8] = ".-";  // codul Morse pentru litera curenta
+char morseAsteptat[8] = ".-";
 int scorCorect = 0;
 int scorTotal = 0;
 unsigned long timpInceputLectie = 0;
 #define TIMEOUT_LECTIE_MS 30000
 
-// ---- Mod Decoder (char buffer fix) ----
 #define MAX_TEXT_DECODAT 24
 char textDecodat[MAX_TEXT_DECODAT + 1] = "";
 uint8_t lungimeText = 0;
 
-// ---- Mod aplicatie ----
 enum Mod { MOD_TRAINER, MOD_DECODER };
 Mod modCurent = MOD_TRAINER;
 
@@ -84,11 +80,9 @@ bool stareBtnModPrecedent = HIGH;
 unsigned long ultimaApasareBtn = 0;
 #define DEBOUNCE_BTN 250
 
-// ---- Animatie LCD ----
 unsigned long ultimaAnimareLCD = 0;
 uint8_t frameAnimLCD = 0;
 
-// ---- Tabel Morse in PROGMEM pentru a economisi RAM ----
 const char letterA[] PROGMEM = ".-";
 const char letterB[] PROGMEM = "-...";
 const char letterC[] PROGMEM = "-.-.";
@@ -125,7 +119,6 @@ const char* const tabelMorse[] PROGMEM = {
 };
 #define NR_LITERE 26
 
-// Citeste codul Morse pentru o litera in buffer
 void getCodMorse(char litera, char* buffer) {
   int idx = litera - 'A';
   if (idx < 0 || idx >= NR_LITERE) {
@@ -135,7 +128,6 @@ void getCodMorse(char litera, char* buffer) {
   strcpy_P(buffer, (PGM_P)pgm_read_word(&(tabelMorse[idx])));
 }
 
-// Decodifica secventa Morse in litera
 char decodificaMorse(const char* secventa) {
   char buffer[8];
   for (int i = 0; i < NR_LITERE; i++) {
@@ -147,14 +139,11 @@ char decodificaMorse(const char* secventa) {
   return '?';
 }
 
-// ---- Istoric microfon (osciloscop) ----
 #define LATIME_OSC 128
 uint8_t istoricNivel[LATIME_OSC];
 int idxOsc = 0;
 
-// ============================================================
-//                  CITIRE MICROFON
-// ============================================================
+// CITIRE MICROFON
 int citesteVarfMicrofon() {
   int maxim = 0;
   for (int i = 0; i < NR_ESANTIOANE; i++) {
@@ -165,9 +154,7 @@ int citesteVarfMicrofon() {
   return maxim;
 }
 
-// ============================================================
-//                  ADAUGA CARACTER MORSE
-// ============================================================
+// ADAUGA CARACTER MORSE
 void adaugaMorse(char c) {
   if (lungimeMorse < MAX_MORSE_LEN) {
     secventaMorse[lungimeMorse++] = c;
@@ -180,9 +167,7 @@ void reseteazaMorse() {
   lungimeMorse = 0;
 }
 
-// ============================================================
-//                  ADAUGA LA TEXT DECODAT
-// ============================================================
+// ADAUGA LA TEXT DECODAT
 void adaugaTextDecodat(char c) {
   if (lungimeText >= MAX_TEXT_DECODAT) {
     // Scroll: muta tot stanga cu 1
@@ -196,9 +181,7 @@ void adaugaTextDecodat(char c) {
   }
 }
 
-// ============================================================
-//                          SETUP
-// ============================================================
+// SETUP
 void setup() {
   Serial.begin(9600);
   delay(500);
@@ -216,10 +199,9 @@ void setup() {
   Serial.println(F("== Signal Corps Boot =="));
   
   Wire.begin();
-  Wire.setClock(100000);  // viteza mai mica pentru OLED ieftin
+  Wire.setClock(100000);
   delay(200);
   
-  // Init OLED cu retry
   Serial.print(F("OLED... "));
   for (int i = 0; i < 5; i++) {
     if (oled.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
@@ -230,7 +212,6 @@ void setup() {
   }
   Serial.println(oledOK ? F("OK") : F("ESEC"));
   
-  // Init LCD
   Serial.print(F("LCD... "));
   lcd.init();
   lcd.backlight();
@@ -247,11 +228,8 @@ void setup() {
   porneste_lectie_noua();
 }
 
-// ============================================================
-//                          LOOP
-// ============================================================
+// LOOP
 void loop() {
-  // Cheia actioneaza buzzerul
   bool cheieApasata = (digitalRead(PIN_CHEIE) == LOW);
   if (cheieApasata) {
     tone(PIN_BUZZER, FRECVENTA_TON);
@@ -268,7 +246,6 @@ void loop() {
     ruleazaModDecoder();
   }
   
-  // Animatie LCD
   if (millis() - ultimaAnimareLCD > 800) {
     ultimaAnimareLCD = millis();
     frameAnimLCD = (frameAnimLCD + 1) % 4;
@@ -276,9 +253,7 @@ void loop() {
   }
 }
 
-// ============================================================
-//                  BUTON SCHIMBARE MOD
-// ============================================================
+// BUTON SCHIMBARE MOD
 void verifica_buton_mod() {
   bool stareNoua = digitalRead(PIN_BTN_MOD);
   
@@ -326,24 +301,19 @@ void schimba_mod() {
   digitalWrite(PIN_LED_R, LOW);
 }
 
-// ============================================================
-//          LCD - mod si scor
-// ============================================================
+// LCD - mod si scor
 void actualizeaza_design_LCD() {
   if (!lcdOK) return;
   
-  // Linia 1: modul curent (centrat, cu animatie pe margini)
   lcd.setCursor(0, 0);
   
   char anim[] = {'.', '-', '.', '-'};
   
   if (modCurent == MOD_TRAINER) {
-    // [< MOD TRAINER >] cu animatie pe margini
     lcd.print(anim[frameAnimLCD]);
     lcd.print(F(" MOD TRAINER "));
     lcd.print(anim[(frameAnimLCD + 2) % 4]);
     
-    // Linia 2: scor centrat
     lcd.setCursor(0, 1);
     lcd.print(F("   Scor: "));
     if (scorCorect < 10) lcd.print(F(" "));
@@ -353,12 +323,10 @@ void actualizeaza_design_LCD() {
     lcd.print(scorTotal);
     lcd.print(F("   "));
   } else {
-    // [< MOD DECODER >] cu animatie pe margini
     lcd.print(anim[frameAnimLCD]);
     lcd.print(F(" MOD DECODER "));
     lcd.print(anim[(frameAnimLCD + 2) % 4]);
     
-    // Linia 2: indicator semnal
     lcd.setCursor(0, 1);
     if (sunetDetectat) {
       lcd.print(F("  >> SEMNAL <<  "));
@@ -368,30 +336,23 @@ void actualizeaza_design_LCD() {
   }
 }
 
-// ============================================================
-//                  MOD TRAINER
-// ============================================================
+// MOD TRAINER
 void ruleazaModTrainer() {
   switch (stareTrainer) {
     case STARE_LECTIE:
       proceseazaSemnalMicrofon();
       ruleaza_lectie();
-      // Desenam OLED-ul cu lectia DOAR daca suntem inca in STARE_LECTIE
-      // (ruleaza_lectie() poate schimba starea in CORECT/GRESIT)
       if (stareTrainer == STARE_LECTIE) {
         actualizeazaOLED_Trainer();
       }
       break;
     case STARE_FEEDBACK_CORECT:
-      // Ramane afisat 5 secunde
       if (millis() - timpStare > 3000) porneste_lectie_noua();
       break;
     case STARE_FEEDBACK_GRESIT:
-      // Ramane afisat 7 secunde (ai timp sa vezi ce era si ce ai transmis)
       if (millis() - timpStare > 3000) porneste_lectie_noua();
       break;
     case STARE_TIMEOUT:
-      // Ramane afisat 5 secunde
       if (millis() - timpStare > 4000) porneste_lectie_noua();
       break;
   }
@@ -473,7 +434,6 @@ void semnaleazaCorect() {
     oled.display();
   }
   
-  // Setam timpStare DUPA delay-uri ca sa numaram timpul COMPLET de afisare
   timpStare = millis();
 }
 
@@ -507,7 +467,6 @@ void semnaleazaGresit() {
     oled.display();
   }
   
-  // Setam timpStare DUPA delay-uri ca sa numaram timpul COMPLET de afisare
   timpStare = millis();
 }
 
@@ -536,13 +495,10 @@ void semnaleazaTimeout() {
     oled.display();
   }
   
-  // Setam timpStare la final ca sa nu fie influentat de delay-uri
   timpStare = millis();
 }
 
-// ============================================================
-//                  OLED MOD TRAINER
-// ============================================================
+// OLED MOD TRAINER
 void actualizeazaOLED_Trainer() {
   if (!oledOK) return;
   
@@ -563,7 +519,6 @@ void actualizeazaOLED_Trainer() {
   oled.setCursor(5, 12);
   oled.print(literaCeruta);
   
-  // Cod Morse asteptat (grafic)
   int x = 40;
   int y = 18;
   for (uint8_t i = 0; i < strlen(morseAsteptat); i++) {
@@ -606,13 +561,10 @@ void actualizeazaOLED_Trainer() {
   oled.display();
 }
 
-// ============================================================
-//                  MOD DECODER
-// ============================================================
+// MOD DECODER
 void ruleazaModDecoder() {
   proceseazaSemnalMicrofon();
   
-  // Decodare la pauza
   if (!sunetDetectat && timpUltimSfarsitSunet > 0 && lungimeMorse > 0) {
     if (millis() - timpUltimSfarsitSunet > PAUZA_CARACTER) {
       char litera = decodificaMorse(secventaMorse);
@@ -638,7 +590,6 @@ void ruleazaModDecoder() {
     }
   }
   
-  // Spatiu intre cuvinte
   if (!sunetDetectat && timpUltimSfarsitSunet > 0 && lungimeMorse == 0) {
     if (millis() - timpUltimSfarsitSunet > PAUZA_CUVANT) {
       if (lungimeText > 0 && textDecodat[lungimeText - 1] != ' ') {
@@ -651,9 +602,7 @@ void ruleazaModDecoder() {
   actualizeazaOLED_Decoder();
 }
 
-// ============================================================
-//                  OLED MOD DECODER
-// ============================================================
+// OLED MOD DECODER
 void actualizeazaOLED_Decoder() {
   if (!oledOK) return;
   
@@ -703,7 +652,6 @@ void actualizeazaOLED_Decoder() {
   oled.print(F("Text:"));
   oled.setCursor(0, 47);
   
-  // Afiseaza ultimele 16 caractere
   int start = (lungimeText > 16) ? lungimeText - 16 : 0;
   for (int i = start; i < lungimeText; i++) {
     oled.print(textDecodat[i]);
@@ -720,9 +668,7 @@ void actualizeazaOLED_Decoder() {
   oled.display();
 }
 
-// ============================================================
-//          PROCESARE SEMNAL MICROFON
-// ============================================================
+// PROCESARE SEMNAL MICROFON
 void proceseazaSemnalMicrofon() {
   int varf = citesteVarfMicrofon();
   int variatie = varf - baselineMic;
@@ -754,7 +700,6 @@ void proceseazaSemnalMicrofon() {
       digitalWrite(PIN_LED_G, LOW);
       
       if (durata < 60) {
-        // zgomot
       } else if (durata < DOT_MAX_MS) {
         adaugaMorse('.');
         Serial.print(F("DOT -> "));
@@ -768,9 +713,7 @@ void proceseazaSemnalMicrofon() {
   }
 }
 
-// ============================================================
-//                  INTRO
-// ============================================================
+// INTRO
 void afiseazaIntro() {
   if (oledOK) {
     oled.clearDisplay();
@@ -800,9 +743,7 @@ void afiseazaIntro() {
   }
 }
 
-// ============================================================
-//                  CALIBRARE MICROFON
-// ============================================================
+// CALIBRARE MICROFON
 void calibreazaMicrofon() {
   if (oledOK) {
     oled.clearDisplay();
