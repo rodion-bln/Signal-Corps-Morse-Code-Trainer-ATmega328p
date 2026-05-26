@@ -1,6 +1,4 @@
-// =====================================================
 //  Signal Corps - Mod Trainer + Mod Decoder
-// =====================================================
 
 #include <Wire.h>
 #include <Adafruit_GFX.h>
